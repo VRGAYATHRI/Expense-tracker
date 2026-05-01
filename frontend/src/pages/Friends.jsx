@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { UserPlus, UserX, Check, X, Trophy } from 'lucide-react';
+import { 
+    UserPlus, UserX, Check, X, Trophy, 
+    BarChart as BarChartIcon, BarChart3
+} from 'lucide-react';
+import { 
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+    Tooltip, ResponsiveContainer, Cell 
+} from 'recharts';
 import './Friends.css';
 
 const Friends = () => {
@@ -161,9 +168,50 @@ const Friends = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Leaderboard */}
+                {/* Right Column: Leaderboard & Comparison Chart */}
                 <div className="friends-main">
-                    <div className="glass-panel p-20 h-100">
+                    {/* Comparison Bar Chart */}
+                    <div className="glass-panel p-20 mb-20">
+                        <div className="flex-between mb-20 border-bottom pb-15">
+                            <h3 className="flex-center" style={{gap: '10px'}}>
+                                <BarChartIcon size={20} color="var(--secondary-color)" /> 
+                                Expense Comparison
+                            </h3>
+                            <div className="text-sm text-secondary">This Month (₹)</div>
+                        </div>
+                        
+                        <div style={{height: '250px', width: '100%'}}>
+                            {leaderboard.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={leaderboard.map(item => ({
+                                        name: item.user.username,
+                                        total: parseFloat(item.total_expenses)
+                                    }))}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis dataKey="name" stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                                        <YAxis stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                                        <Tooltip 
+                                            cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                            contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--surface-border)', borderRadius: '8px' }}
+                                        />
+                                        <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                                            {leaderboard.map((entry, index) => (
+                                                <Cell 
+                                                    key={`cell-${index}`} 
+                                                    fill={entry.user.username === user.username ? 'var(--secondary-color)' : 'var(--primary-color)'} 
+                                                    fillOpacity={0.8}
+                                                />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex-center h-100 text-muted">No data for chart</div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="glass-panel p-20">
                         <div className="flex-between mb-20 border-bottom pb-15">
                             <h3 className="flex-center" style={{gap: '10px'}}>
                                 <Trophy size={20} color="var(--primary-color)" /> 
