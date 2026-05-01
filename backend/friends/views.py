@@ -112,15 +112,18 @@ class CompareView(views.APIView):
                 users_to_compare.append(rel.from_user)
 
         leaderboard = []
+        # For daily comparison chart
+        daily_map = {} # date -> {username: amount}
+
         for u in users_to_compare:
             expenses = Expense.objects.filter(
                 user=u,
                 date__year=year,
                 date__month=month
             )
-            total = expenses.aggregate(total=Sum('amount'))['total'] or 0
             
-            # Simplified category breakdown for leaderboard
+            # Leaderboard data
+            total = expenses.aggregate(total=Sum('amount'))['total'] or 0
             categories = list(expenses.values('category').annotate(total=Sum('amount')).order_by('-total')[:3])
             
             leaderboard.append({
@@ -128,8 +131,28 @@ class CompareView(views.APIView):
                 "total_expenses": total,
                 "top_categories": categories
             })
+
+            # Daily data
+            daily_totals = expenses.values('date').annotate(total=Sum('amount'))
+            for dt in daily_totals:
+                d_str = dt['date'].strftime('%Y-%m-%d')
+                if d_str not in daily_map:
+                    daily_map[d_str] = {}
+                daily_map[d_str][u.username] = float(dt['total'])
             
         # Sort by total expenses (highest first)
         leaderboard.sort(key=lambda x: x['total_expenses'], reverse=True)
+
+        # Convert daily_map to sorted list for chart
+        daily_comparison = []
+        for d_str in sorted(daily_map.keys()):
+            entry = {"date": d_str}
+            entry.update(daily_map[d_str])
+            daily_comparison.append(entry)
         
-        return Response(leaderboard)
+        return Response({
+            "leaderboard": leaderboard,
+            "daily_comparison": daily_comparison,
+            "usernames": [u.username for u in users_to_compare]
+        })
+

@@ -3,19 +3,24 @@ import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { 
     UserPlus, UserX, Check, X, Trophy, 
-    BarChart as BarChartIcon, BarChart3
+    BarChart as BarChartIcon, BarChart3, Activity
 } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, Cell 
+    Tooltip, ResponsiveContainer, Cell,
+    LineChart, Line
 } from 'recharts';
 import './Friends.css';
+
+const COLORS = ['#FF9800', '#2196F3', '#E91E63', '#9C27B0', '#F44336', '#4CAF50', '#3F51B5', '#9E9E9E'];
 
 const Friends = () => {
     const { user } = useContext(AuthContext);
     const [friends, setFriends] = useState([]);
     const [requests, setRequests] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
+    const [dailyData, setDailyData] = useState([]);
+    const [usernames, setUsernames] = useState([]);
     const [searchUsername, setSearchUsername] = useState('');
     const [searchError, setSearchError] = useState('');
     const [searchSuccess, setSearchSuccess] = useState('');
@@ -42,7 +47,9 @@ const Friends = () => {
                 compareUrl += `?month=${filterMonth}`;
             }
             const leaderboardRes = await api.get(compareUrl);
-            setLeaderboard(leaderboardRes.data);
+            setLeaderboard(leaderboardRes.data.leaderboard || []);
+            setDailyData(leaderboardRes.data.daily_comparison || []);
+            setUsernames(leaderboardRes.data.usernames || []);
             
         } catch (error) {
             console.error("Error fetching friends data", error);
@@ -168,16 +175,58 @@ const Friends = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Leaderboard & Comparison Chart */}
+                {/* Right Column: Leaderboard & Comparison Charts */}
                 <div className="friends-main">
+                    {/* Daily Comparison Line Chart */}
+                    <div className="glass-panel p-20 mb-20">
+                        <div className="flex-between mb-20 border-bottom pb-15">
+                            <h3 className="flex-center" style={{gap: '10px'}}>
+                                <Activity size={20} color="#4caf50" /> 
+                                Daily Spending Track
+                            </h3>
+                            <div className="text-sm text-secondary">Daily Comparison (₹)</div>
+                        </div>
+                        
+                        <div style={{height: '300px', width: '100%'}}>
+                            {dailyData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={dailyData.map(item => ({
+                                        ...item,
+                                        date: item.date.split('-')[2] // Show only day of month
+                                    }))}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis dataKey="date" stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                                        <YAxis stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                                        <Tooltip 
+                                            contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--surface-border)', borderRadius: '8px' }}
+                                        />
+                                        {usernames.map((name, index) => (
+                                            <Line 
+                                                key={name}
+                                                type="monotone" 
+                                                dataKey={name} 
+                                                stroke={name === user.username ? 'var(--secondary-color)' : COLORS[index % COLORS.length]} 
+                                                strokeWidth={name === user.username ? 3 : 2}
+                                                dot={{ r: 3 }}
+                                                activeDot={{ r: 6 }}
+                                            />
+                                        ))}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex-center h-100 text-muted">No daily data available</div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Comparison Bar Chart */}
                     <div className="glass-panel p-20 mb-20">
                         <div className="flex-between mb-20 border-bottom pb-15">
                             <h3 className="flex-center" style={{gap: '10px'}}>
                                 <BarChartIcon size={20} color="var(--secondary-color)" /> 
-                                Expense Comparison
+                                Monthly Comparison
                             </h3>
-                            <div className="text-sm text-secondary">This Month (₹)</div>
+                            <div className="text-sm text-secondary">Total This Month (₹)</div>
                         </div>
                         
                         <div style={{height: '250px', width: '100%'}}>
@@ -198,7 +247,7 @@ const Friends = () => {
                                             {leaderboard.map((entry, index) => (
                                                 <Cell 
                                                     key={`cell-${index}`} 
-                                                    fill={entry.user.username === user.username ? 'var(--secondary-color)' : 'var(--primary-color)'} 
+                                                    fill={entry.user.username === user.username ? 'var(--secondary-color)' : COLORS[index % COLORS.length]} 
                                                     fillOpacity={0.8}
                                                 />
                                             ))}
