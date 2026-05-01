@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from .models import Friendship
 from expenses.models import Expense
 from .serializers import FriendshipSerializer, FriendRequestSerializer, SendRequestSerializer
+from accounts.serializers import UserSerializer
 from datetime import datetime
 
 class FriendListView(generics.ListAPIView):
